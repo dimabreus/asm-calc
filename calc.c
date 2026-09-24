@@ -99,16 +99,6 @@ void lexer(char *code) {
     }
 }
 
-/*
-struct Node {
-    int8_t type      = NODE_LITERAL | NODE_BINOP;                                  0
-    int8_t binopType = BINOP_PLUS | BINOP_MINUS | BINOP_MULTIPLY | BINOP_DIVIDE;   1
-    int64_t literal  = NUMBER;                                                     2
-    int64_t left    = pointer to Node;                                             10
-    int64_t right   = pointer to Node;                                             18
-}
-*/
-
 int8_t *createNode() {
     int8_t *node = malloc(26);
     memset(node, 0, 26);
