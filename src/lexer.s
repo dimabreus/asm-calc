@@ -44,10 +44,10 @@ add_token:
 %macro m_cmp 3
 	cmp     rax, %1
 	jne     %%skip
-    push rcx
+	push    rcx
 	m_add   %2, %3
-    pop rcx
-    jmp .loop_end
+	pop     rcx
+	jmp     .loop_end
 %%skip:
 %endmacro
 
@@ -55,8 +55,7 @@ lexer:
 	xor     rcx, rcx
 
 .loop:
-	xor     rax, rax
-	mov     al, [input_buffer + rcx]
+	movzx   rax, byte [input_buffer + rcx]
 
 	cmp     rax, 0
 	je      .null_terminator
@@ -91,8 +90,7 @@ lexer:
 	add     rdx, rax
 
 	inc     rcx
-	xor     rax, rax
-	mov     al, [input_buffer + rcx]
+	movzx   rax, byte [input_buffer + rcx]
 
 	jmp     .parse_digit
 .add_number:

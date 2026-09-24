@@ -1,8 +1,7 @@
 %include "src/defs.inc"
 
-
 global _start
-global lexer_current
+global parser_current
 global vec_tokens
 global input_buffer
 extern exit
@@ -10,13 +9,14 @@ extern input
 extern add_token
 extern print
 extern lexer
+extern parser
+extern is_at_end
 
 section .bss
 vec_tokens      resb    24
 input_buffer    resb    256
 
 section .data
-lexer_current:  dq      0
 input_string:   db      "> ", 0
 tokens_string:  db      "Tokens:", 10, 0
 token_string:   db      "%d. TYPE: %d, literal: %ld", 10, 0
@@ -42,10 +42,7 @@ print_tokens:
 	push    rcx
 	pop     rsi
 	pop     rcx
-	;mov     rsi, rcx
-	;mov     rcx, rsi
-	xor     rdx, rdx
-	mov     dl, dil
+	movzx     rdx, dil
 	mov     rdi, token_string
 	call    print
 
@@ -56,7 +53,7 @@ print_tokens:
 .end:
 	ret
 
-_start:
+input_expr:
 	mov     rdi, input_string
 	call    print
 
@@ -64,10 +61,17 @@ _start:
 	mov     rsi, 256
 	call    input
 
+	ret
+
+_start:
+	call    input_expr
+
 	call    lexer
 
 	call    print_tokens
 
-	
+	mov rcx, 0
+	call parser
+
 	mov     rdi, 0
 	call    exit
