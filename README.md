@@ -6,12 +6,12 @@
 ### Lines Of Code
 
 #### C:
-```sh
+```cpp
 356 calc.c
 ```
 
 #### ASM:
-```sh
+```cpp
   849 total
   272 src/parser.s
   130 src/format.s
