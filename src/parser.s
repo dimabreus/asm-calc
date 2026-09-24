@@ -7,12 +7,13 @@ extern vec_tokens
 extern print
 extern exit
 extern calloc
+extern format_token_type
 
 section .data
-incorrect_type_string db      "Expected: %d, got %d", 10, 0
-expected_eof_string db      "Expected: EOF, got: %d", 10, 0
-section .text
+incorrect_type_string db      "Expected: %s, got %s", 10, 0
+expected_eof_string db      "Expected: EOF, got: %s", 10, 0
 
+section .text
 ; input:
 ; rcx - current index
 ; output:
@@ -80,9 +81,14 @@ consume:
 	cmp     rax, 1
 	je      .success
 
+	call    format_token_type
+	mov     rsi, rax
+
 	call    peek
-	movzx   rdx, byte [rax]
-	mov     rsi, rdi
+	movzx   rdi, byte [rax]
+	call    format_token_type
+	mov     rdx, rax
+
 	mov     rdi, incorrect_type_string
 	call    print
 
@@ -255,7 +261,9 @@ parser:
 	je      .end
 
 	call    peek
-	movzx   rsi, byte [rax]
+	movzx   rdi, byte [rax]
+	call    format_token_type
+	mov     rsi, rax
 
 	mov     rdi, expected_eof_string
 	call    print

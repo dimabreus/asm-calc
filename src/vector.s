@@ -1,6 +1,8 @@
+global vec_add
+global vec_clear
+extern realloc
+
 section .text
-    global vec_add
-    extern realloc
 
 ; input:
 ; rdi - address of the vector
@@ -42,4 +44,8 @@ vec_add:
 	inc     qword [rdi + 8]
 	ret
 
-
+; input:
+; rdi - address of the vector
+vec_clear:
+	mov     [rdi + 8], 0
+	ret

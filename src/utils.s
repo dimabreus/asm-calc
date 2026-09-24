@@ -1,7 +1,9 @@
 global string_length
 global print
+global sprint
 global input
 extern printf
+extern sprintf
 extern fgets
 extern stdin
 
@@ -32,6 +34,15 @@ print:
 	xor     eax, eax
 	call    printf
 	ret
+
+; input:
+; rdi - pointer to destination buffer
+; rsi - pointer to format string
+; (optional) rdx, rcx, r8, r9
+sprint:
+    xor     eax, eax
+    call    sprintf
+    ret
 
 ; input:
 ; rdi - pointer to the buffer
