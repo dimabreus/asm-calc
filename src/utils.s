@@ -27,6 +27,7 @@ string_length:
 
 ; input:
 ; rdi - pointer to the string
+; (optional) rsi, rdx, rcx, r8, r9
 print:
 	xor     eax, eax
 	call    printf
