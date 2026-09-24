@@ -33,3 +33,11 @@ struct Node { // 26 bytes
     int64_t right    = "pointer to Node";                                                // 18
 }
 ```
+
+```c
+struct Vector { // 24 bytes
+    int64_t data = "pointer to array, each 8 bytes"; // 0
+    int64_t size = 'NUMBER';                         // 8
+    int64_t cap =  'NUMBER';                         // 16
+}
+```
