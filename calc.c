@@ -13,13 +13,16 @@
 #define TOKEN_RIGHT_BRACKET 5
 #define TOKEN_NUMBER 6
 #define TOKEN_EOF 7
+#define TOKEN_FACT 8
 
 #define NODE_LITERAL 0
 #define NODE_BINOP 1
+#define NODE_UNARY 2
 #define BINOP_PLUS 0
 #define BINOP_MINUS 1
 #define BINOP_MULTIPLY 2
 #define BINOP_DIVIDE 3
+#define UNARY_FACTORIAL 0
 
 typedef struct {
     int64_t *data;
@@ -80,6 +83,7 @@ void lexer(char *code) {
         else if (c == '/') lexerAddToken(TOKEN_SLASH, 0);
         else if (c == '(') lexerAddToken(TOKEN_LEFT_BRACKET, 0);
         else if (c == ')') lexerAddToken(TOKEN_RIGHT_BRACKET, 0);
+        else if (c == '!') lexerAddToken(TOKEN_FACT, 0);
         else if (c >= '0' && c <= '9') {
             int64_t number = 0;
 
@@ -113,6 +117,10 @@ void setNodeBinopType(int8_t *node, int8_t binopType) {
     node[1] = binopType;
 }
 
+void setNodeUnaryType(int8_t *node, int8_t unaryType) {
+    node[1] = unaryType;
+}
+
 void setNodeLiteral(int8_t *node, int64_t literal) {
     memcpy(node + 2, &literal, 8);
 }
@@ -143,6 +151,7 @@ char *formatType(int8_t type) {
            : type == TOKEN_LEFT_BRACKET  ? "LEFT_BRACKET"
            : type == TOKEN_RIGHT_BRACKET ? "RIGHT_BRACKET"
            : type == TOKEN_NUMBER        ? "NUMBER"
+           : type == TOKEN_FACT          ? "FACTORIAL"
                                          : "EOF";
 }
 
@@ -203,18 +212,28 @@ int8_t *term();
 int8_t *expression();
 
 int8_t *factor() {
+    int8_t *node;
+
     if (match(TOKEN_LEFT_BRACKET)) {
-        int8_t *expr = expression();
+        node = expression();
         consume(TOKEN_RIGHT_BRACKET);
-        return expr;
+    } else {
+        int8_t *numberToken = consume(TOKEN_NUMBER);
+        int64_t literal = tokenGetLiteral(numberToken);
+
+        node = createNode();
+        setNodeType(node, NODE_LITERAL);
+        setNodeLiteral(node, literal);
     }
 
-    int8_t *numberToken = consume(TOKEN_NUMBER);
-    int64_t literal = tokenGetLiteral(numberToken);
+    while (match(TOKEN_FACT)) {
+        int8_t *operand = node;
 
-    int8_t *node = createNode();
-    setNodeType(node, NODE_LITERAL);
-    setNodeLiteral(node, literal);
+        node = createNode();
+        setNodeType(node, NODE_UNARY);
+        setNodeUnaryType(node, UNARY_FACTORIAL);
+        setNodeLeft(node, operand);
+    }
 
     return node;
 }
@@ -276,6 +295,18 @@ char *formatAst(int8_t *ast) {
         return buffer;
     }
 
+    if (type == NODE_UNARY) {
+        int64_t leftAddr;
+        memcpy(&leftAddr, ast + 10, 8);
+
+        int8_t *left = (int8_t *)(intptr_t)leftAddr;
+        char *leftFormatted = formatAst(left);
+
+        char *buffer = malloc(256);
+        sprintf(buffer, "%s!", leftFormatted);
+        return buffer;
+    }
+
     int64_t leftAddr, rightAddr;
     memcpy(&leftAddr, ast + 10, 8);
     memcpy(&rightAddr, ast + 18, 8);
@@ -306,6 +337,24 @@ int64_t calc(int64_t left, int64_t right, int8_t operator) {
     return -1;
 }
 
+int64_t factorial(int64_t value) {
+    if (value < 0) {
+        printf("factorial is undefined for negative numbers\n");
+        return -1;
+    }
+
+    int64_t result = 1;
+    for (int64_t i = 2; i <= value; i++) {
+        if (result > INT64_MAX / i) {
+            printf("sorry bud, factorial overflows int64\n");
+            return -1;
+        }
+        result *= i;
+    }
+
+    return result;
+}
+
 int64_t interpreter(int8_t *ast) {
     int8_t type = *ast;
     int8_t binopType = *(ast + 1);
@@ -313,6 +362,19 @@ int64_t interpreter(int8_t *ast) {
     if (type == NODE_LITERAL) {
         int64_t literal = *(int64_t *)(ast + 2);
         return literal;
+    }
+
+    if (type == NODE_UNARY) {
+        int64_t leftAddr;
+        memcpy(&leftAddr, ast + 10, 8);
+
+        int8_t *left = (int8_t *)(intptr_t)leftAddr;
+        int64_t leftValue = interpreter(left);
+
+        if (binopType == UNARY_FACTORIAL)
+            return factorial(leftValue);
+
+        return -1;
     }
 
     int64_t leftAddr, rightAddr;
