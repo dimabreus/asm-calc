@@ -1,0 +1,400 @@
+load "std::io";
+load "std::string";
+load "std::heap";
+load "std::vector";
+
+using std::io;
+using std::string;
+using std::vector;
+
+enum TokenType { 
+    PLUS,
+    MINUS,
+    STAR,
+    SLASH,
+    LEFT_BRACKET,
+    RIGHT_BRACKET,
+    NUMBER,
+    EOF,
+    FACT
+};
+
+enum NodeType {
+    LITERAL,
+    BINOP,
+    UNARY
+};
+
+enum OpType {
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    FACTORIAL
+};
+
+struct Token {
+    TokenType type;
+    i64 literal;
+};
+
+struct Node {
+    NodeType type;
+    OpType opType;
+    i64 literal;
+    *Node left;
+    *Node right;
+};
+
+
+struct Lexer {
+    mut u64 current;
+    mut string code;
+    @init mut vec<Token> tokens;
+
+    bool isAlpha(char c) {
+        return c >= '0' && c<= '9';
+    }
+
+    void parseNumber() {
+        mut i64 number = 0;
+        mut char c;
+
+        while (isAlpha(c = code.get(current))) {
+            number *= 10;
+            number += c - 48;
+            current++;
+        }
+
+        tokens.push(Token { TokenType::NUMBER, number });
+    }
+
+    vec<Token> parse(str s) {
+        current = 0;
+        code = makestr(s);
+        tokens.clear();
+
+        while (true) {
+            char c = code.get(current);
+
+            if (c == '\0') {
+                tokens.push(Token { TokenType::EOF, 0 });
+                break;
+            }
+            
+            switch (c) {
+                case ' ':
+                case '\n': {
+                    current++;
+                    continue;
+                }
+                case '+': {
+                    tokens.push(Token { TokenType::PLUS, 0});
+                    break;
+                }
+                case '-': {
+                    tokens.push(Token {TokenType::MINUS, 0 });
+                    break;
+                }
+                case '*': {
+                    tokens.push(Token {TokenType::STAR, 0 });
+                    break;
+                }
+                case '/': {
+                    tokens.push(Token {TokenType::SLASH, 0 });
+                    break;
+                }
+                case '(': {
+                    tokens.push(Token {TokenType::LEFT_BRACKET, 0 });
+                    break;
+                }
+                case ')': {
+                    tokens.push(Token {TokenType::RIGHT_BRACKET, 0 });
+                    break;
+                }
+                case '!': {
+                    tokens.push(Token {TokenType::FACT, 0 });
+                    break;
+                }
+                default: {
+                    if (isAlpha(c)) {
+                        parseNumber();
+                        continue;
+                    }
+
+                    println(makestr("Unexpected char: ").add_char(c).cstr());
+                }
+            }
+
+            current++;
+        }
+
+        return tokens;
+    }
+};
+
+struct Parser {
+    mut i32 current;
+    mut vec<Token> tokens;
+    
+    Token peek() {
+        return tokens.get(current);
+    }
+
+    Token previous() {
+        return tokens.get(current - 1);
+    }
+
+    Token advance() {
+        if (!isAtEnd())
+            current++;
+        return previous();
+    }
+
+    Token consume(TokenType type) {
+        if (check(type))
+            return advance();
+        
+        println(
+            makestr("Expected: ")
+            .add(formatType(type))
+            .add(", got: ")
+            .add(formatType(peek().type))
+            .cstr()
+        );
+        exit(1);
+        return Token {0 as! TokenType, 0};
+    }
+
+    bool isAtEnd() {
+        return peek().type == TokenType::EOF;
+    }
+
+    bool check(TokenType type) {
+        return peek().type == type;
+    }
+    
+    bool match(TokenType type) {
+        if (check(type)) {
+            advance();
+            return true;
+        }
+        return false;
+    }
+
+    // --------------------
+
+    *Node parse(vec<Token> tokens) {
+        current = 0;
+        this.tokens = tokens;
+
+        *Node expr = expression();
+
+        if (!isAtEnd()) {
+            consume(TokenType::EOF);
+        }
+
+        return expr;
+    }
+
+    *Node expression() {
+        mut *Node node = term();
+
+        while (match(TokenType::PLUS) || match(TokenType::MINUS)) {
+            TokenType operatorToken = previous().type;
+            *Node right = term();
+            
+            mut *Node tmp = std::heap::heap_malloc(sizeof(Node)) as! *Node;
+
+            tmp.left = node;
+            tmp.type = NodeType::BINOP;
+            if (operatorToken == TokenType::PLUS)
+                tmp.opType = OpType::PLUS;
+            else
+                tmp.opType = OpType::MINUS;
+            tmp.right = right;
+            node = tmp;
+        }
+
+        return node;
+    }
+
+    *Node term() {
+        mut *Node node = factor();
+
+        while (match(TokenType::STAR) || match(TokenType::SLASH)) {
+            TokenType operatorToken = previous().type;
+            *Node right = factor();
+
+            mut *Node tmp = std::heap::heap_malloc(sizeof(Node)) as! *Node;
+
+            tmp.left = node;
+            if (operatorToken == TokenType::STAR)
+                tmp.opType = OpType::MULTIPLY;
+            else
+                tmp.opType = OpType::DIVIDE;
+            tmp.type = NodeType::BINOP;
+            tmp.right = right;
+            node = tmp;
+        }
+
+        return node;
+    }
+
+    *Node factor() {
+        mut *Node node;
+
+        if (match(TokenType::LEFT_BRACKET)) {
+            node = expression();
+            consume(TokenType::RIGHT_BRACKET);
+        } else {
+            i64 number = consume(TokenType::NUMBER).literal;
+            node = std::heap::heap_malloc(sizeof(Node)) as! *Node;
+            node.type = NodeType::LITERAL;
+            node.literal = number;
+        }
+
+        while (match(TokenType::FACT)) {
+            mut *Node tmp = std::heap::heap_malloc(sizeof(Node)) as! *Node;
+
+            tmp.left = node;
+            tmp.type = NodeType::UNARY;
+            tmp.opType = OpType::FACTORIAL;
+
+            node = tmp;
+        }
+
+        return node;
+    }
+};
+
+str formatType(TokenType type) {
+    switch (type) {
+        case TokenType::PLUS: return "PLUS";
+        case TokenType::MINUS: return "MINUS";
+        case TokenType::STAR: return "STAR";
+        case TokenType::LEFT_BRACKET: return "LEFT_BRACKET";
+        case TokenType::RIGHT_BRACKET: return "RIGHT_BRACKET";
+        case TokenType::NUMBER: return "NUMBER";
+        case TokenType::EOF: return "EOF";
+        case TokenType::FACT: return "FACT";
+        default: return "UNKNOWN";
+    }
+}
+
+str formatOpType(OpType opType) {
+    switch (opType) {
+        case OpType::PLUS: return "+";
+        case OpType::MINUS: return "-";
+        case OpType::MULTIPLY: return "*";
+        case OpType::DIVIDE: return "/";
+        case OpType::FACTORIAL: return "!";
+        default: return "UNKNOWN";
+    }
+}
+
+str input() {
+    str inputBuffer = std::heap::heap_malloc(256) as! str;
+    print("> ");
+    read(inputBuffer, 256);
+
+    return inputBuffer;
+}
+
+void printTokens(vec<Token> tokens) {
+    for (mut i32 i = 0; i < tokens.size; i++) {
+        Token t = tokens.get(i);
+
+        println(
+            makestr(i as str)
+            .add(". ")
+            .add(formatType(t.type))
+            .add(" (")
+            .add(t.literal as str)
+            .add(")")
+            .cstr()
+        );
+    }
+}
+
+str printAst(*Node ast) {
+    switch (ast.type) {
+        case NodeType::LITERAL: {
+            return ast.literal as str;
+        }
+        case NodeType::BINOP: {
+            str l = printAst(ast.left);
+            str op = formatOpType(ast.opType);
+            str r = printAst(ast.right);
+            return makestr("(").add(l).add(" ").add(op).add(" ").add(r).add(")").cstr();
+        }
+        case NodeType::UNARY: {
+            str l = printAst(ast.left);
+            str op = formatOpType(ast.opType);
+            return makestr("(").add(l).add(op).add(")").cstr();
+        }
+        default: {
+            return "UNKNOWN";
+        }
+    }
+}
+
+i64 factorial(i64 n) {
+    if (n <= 1)
+        return 1;
+
+    return n * factorial(n - 1);
+}
+
+i64 eval(*Node ast) {
+    switch (ast.type) {
+        case NodeType::LITERAL: {
+            return ast.literal;
+        }
+        case NodeType::BINOP: {
+            i64 l = eval(ast.left);
+            i64 r = eval(ast.right);
+            switch (ast.opType) {
+                case OpType::PLUS:
+                    return l + r;
+                case OpType::MINUS:
+                    return l - r;
+                case OpType::MULTIPLY:
+                    return l * r;
+                case OpType::DIVIDE:
+                    return l / r;
+                default:
+                    return -1;
+            }
+        }
+        case NodeType::UNARY: {
+            i64 l = eval(ast.left);
+
+            return factorial(l);
+        }
+        default: {
+            return -1;
+        }
+    }
+}
+
+@init Lexer lexer;
+@init Parser parser;
+
+void processInput() {
+    str code = input();
+
+    vec<Token> tokens = lexer.parse(code);
+    *Node ast = parser.parse(tokens);
+    i64 result = eval(ast);
+
+    println(result as str);
+}
+
+@entry i32 main() {
+    while (true) {
+        processInput();
+    }
+
+    return 0;
+}
