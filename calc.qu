@@ -381,19 +381,18 @@ i64 eval(*Node ast) {
 @init Lexer lexer;
 @init Parser parser;
 
-void processInput() {
-    str code = input();
-
-    vec<Token> tokens = lexer.parse(code);
-    *Node ast = parser.parse(tokens);
-    i64 result = eval(ast);
-
-    println(result as str);
-}
-
 @entry i32 main() {
     while (true) {
-        processInput();
+        str code = input();
+
+        if (str_eq(code, "q\n"))
+            break;
+
+        vec<Token> tokens = lexer.parse(code);
+        *Node ast = parser.parse(tokens);
+        i64 result = eval(ast);
+
+        println(result as str);
     }
 
     return 0;

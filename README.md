@@ -10,7 +10,6 @@
 
 #### [Quant](https://github.com/quant-lang/quant):
 - arena instead of heap
-- q = quit
 - proper error catching
 
 ### Lines Of Code
@@ -35,5 +34,5 @@
 
 #### [Quant](https://github.com/quant-lang/quant):
 ```cpp
-  399 calc.qu
+  398 calc.qu
 ```
