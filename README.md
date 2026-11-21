@@ -1,13 +1,23 @@
 <img width="860" height="301" alt="image" src="https://github.com/user-attachments/assets/4180fcdd-bbe2-47cb-92ed-b7d65ffc7eae" />
 
 ### Todo:
-- Add factorial
+#### C:
+- proper error catching
+
+#### ASM:
+- add factorial
+- proper error catching
+
+#### [Quant](https://github.com/quant-lang/quant):
+- arena instead of heap
+- q = quit
+- proper error catching
 
 ### Lines Of Code
 
 #### C:
 ```cpp
-356 calc.c
+  418 calc.c
 ```
 
 #### ASM:
@@ -21,4 +31,9 @@
    67 src/utils.s
    50 src/vector.s
    20 src/defs.inc
+```
+
+#### [Quant](https://github.com/quant-lang/quant):
+```cpp
+  399 calc.qu
 ```
